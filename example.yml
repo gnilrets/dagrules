@@ -1,0 +1,116 @@
+---
+version: '1'
+
+rules:
+  - name: Every source must have a snapshot
+    subject:
+      source:
+        match-name: '.*'
+    relates-to:
+      children:
+        match-name: '.*'
+    must:
+      cardinality: > 0
+
+  - name: Snapshot must be prefixed with snap_
+    subject:
+      snapshot:
+        match-name: '.*'
+    must:
+      match-name: 'snap_.*'
+
+  - name: Non-base staging models must be prefixed with stg_
+    subject:
+      node:
+        tags:
+          include: staging
+          exclude: base
+    must:
+      match-name: 'stg_.*'
+
+  - name: Base models must be prefixed with base_
+    subject:
+      node:
+        tags:
+          include: base
+    must:
+      match-name: 'base_.*'
+
+  - name: All models must be tagged either: snapshot, base, staging, intermediate, core, mart
+    subject:
+      node:
+        match-name: '.*'
+    must:
+      tags-or:
+        - snaphost
+        - base
+        - staging
+        - intermediate
+        - core
+        - mart
+
+  - name: Snapshots must have 0 or 1 base model children, nothing else
+    subject:
+      snapshot:
+        match-name: '.*'
+    relates-to:
+      children:
+        match-name: '.*'
+    must:
+      tags:
+        - base
+      cardinality: 0,1
+
+  - name: Intermediate models may only depend on non-base staging, core, mart, or other intermediate models
+    subject:
+      node:
+        tags:
+          include: intermediate
+    relates-to:
+      parents:
+        match-name: '.*'
+    # But my "must" is actually about the related object, not the subject
+    must:
+      tags-or:
+          - include: staging
+            exclude: base
+          - core
+          - mart
+          - intermediate
+
+  - name: Core models must be tagged as dim or fct
+    subject:
+      node:
+        tags:
+          include: core
+    must:
+      tags-or:
+        - dim
+        - fct
+
+  - name: Core dimension models must only depend on staging or intermediate
+    subject:
+      node:
+        tags:
+          include: dim
+    relates-to:
+      parents:
+        match-name: '.*'
+    must:
+      tags-or:
+        - staging
+        - intermediate
+
+  - name: Core fact models must only depend on staging, intermediate, or dimension models
+    subject:
+      node:
+        tags:
+          include: fct
+    relates-to:
+      parents:
+        match-name: '.*'
+    must:
+      tags-or:
+        - staging
+        - intermediate
+        - dim
