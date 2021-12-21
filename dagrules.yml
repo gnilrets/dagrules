@@ -31,7 +31,7 @@ rules:
     must:
       match-name: /base_.*/
 
-  - name: All models must be tagged either: snapshot, base, staging, intermediate, core, mart
+  - name: 'All models must be tagged either: snapshot, base, staging, intermediate, core, mart'
     # Omit subject to include all nodes
     must:
       tags: # Tags is an "or" condition
