@@ -4,44 +4,37 @@ version: '1'
 rules:
   - name: Every source must have a snapshot
     subject:
-      source:
-        match-name: '.*'
-    relates-to:
-      children:
-        match-name: '.*'
+      type: source
+      relates-to:
+        children: immediate  # /any
     must:
-      cardinality: > 0
+      relationship: one_to_one
 
   - name: Snapshot must be prefixed with snap_
     subject:
-      snapshot:
-        match-name: '.*'
+      type: snapshot
     must:
-      match-name: 'snap_.*'
+      match-name: /snap_.*/
 
   - name: Non-base staging models must be prefixed with stg_
     subject:
-      node:
-        tags:
-          include: staging
+      type: node  # node is the default type
+      tags:
+        - include: staging
           exclude: base
     must:
       match-name: 'stg_.*'
 
   - name: Base models must be prefixed with base_
     subject:
-      node:
-        tags:
-          include: base
+      tags: base  # want to be flexible about include/exclude/array/etc
     must:
-      match-name: 'base_.*'
+      match-name: /base_.*/
 
   - name: All models must be tagged either: snapshot, base, staging, intermediate, core, mart
-    subject:
-      node:
-        match-name: '.*'
+    # Omit subject to include all nodes
     must:
-      tags-or:
+      tags: # Tags is an "or" condition
         - snaphost
         - base
         - staging
@@ -49,68 +42,58 @@ rules:
         - core
         - mart
 
-  - name: Snapshots must have 0 or 1 base model children, nothing else
+  - name: Snapshots must have 0 or 1 children, which must all be base models
     subject:
-      snapshot:
-        match-name: '.*'
-    relates-to:
-      children:
-        match-name: '.*'
+      type: snapshot
+      relates-to:
+        children: immediate
     must:
-      tags:
+      relationship: one_to_one
+      relationship-required: false
+      related-tags:
         - base
-      cardinality: 0,1
 
   - name: Intermediate models may only depend on non-base staging, core, mart, or other intermediate models
     subject:
-      node:
-        tags:
-          include: intermediate
-    relates-to:
-      parents:
-        match-name: '.*'
-    # But my "must" is actually about the related object, not the subject
+      tags:
+        include: intermediate
+      relates-to:
+        parents: immediate
     must:
-      tags-or:
-          - include: staging
-            exclude: base
-          - core
-          - mart
-          - intermediate
+      tags:
+        - include: staging
+          exclude: base
+        - core
+        - mart
+        - intermediate
 
   - name: Core models must be tagged as dim or fct
     subject:
-      node:
-        tags:
-          include: core
+      tags: core
     must:
-      tags-or:
+      tags:
         - dim
         - fct
 
   - name: Core dimension models must only depend on staging or intermediate
     subject:
-      node:
-        tags:
-          include: dim
-    relates-to:
-      parents:
-        match-name: '.*'
+      tags:
+        include: dim
+      relates-to:
+        parents: immediate
     must:
-      tags-or:
+      tags:
         - staging
         - intermediate
 
   - name: Core fact models must only depend on staging, intermediate, or dimension models
     subject:
-      node:
-        tags:
-          include: fct
-    relates-to:
-      parents:
-        match-name: '.*'
+      tags:
+        include: fct
+      relates-to:
+        parents: immediate
     must:
-      tags-or:
+      tags:
         - staging
         - intermediate
         - dim
