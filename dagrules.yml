@@ -1,5 +1,5 @@
 ---
-version: '1'
+version: '0'
 
 rules:
   - name: Every source must have a snapshot
@@ -8,7 +8,9 @@ rules:
       relates-to:
         children: immediate  # /any
     must:
-      relationship: one_to_one
+      have-relationship:
+        cardinality: one_to_one
+        related-type: snapshot
 
   - name: Snapshot must be prefixed with snap_
     subject:
@@ -34,7 +36,7 @@ rules:
   - name: 'All models must be tagged either: snapshot, base, staging, intermediate, core, mart'
     # Omit subject to include all nodes
     must:
-      tags: # Tags is an "or" condition
+      have-tags-any:
         - snaphost
         - base
         - staging
@@ -48,10 +50,11 @@ rules:
       relates-to:
         children: immediate
     must:
-      relationship: one_to_one
-      relationship-required: false
-      related-tags:
-        - base
+      have-relationship:
+        cardinality: one_to_one
+        required: false
+        related-tags:
+          - base
 
   - name: Intermediate models may only depend on non-base staging, core, mart, or other intermediate models
     subject:
@@ -60,7 +63,7 @@ rules:
       relates-to:
         parents: immediate
     must:
-      tags:
+      have-tags-any:
         - include: staging
           exclude: base
         - core
@@ -71,7 +74,7 @@ rules:
     subject:
       tags: core
     must:
-      tags:
+      have-tags-any:
         - dim
         - fct
 
@@ -82,7 +85,7 @@ rules:
       relates-to:
         parents: immediate
     must:
-      tags:
+      have-tags-any:
         - staging
         - intermediate
 
@@ -93,7 +96,7 @@ rules:
       relates-to:
         parents: immediate
     must:
-      tags:
+      have-tags-any:
         - staging
         - intermediate
         - dim

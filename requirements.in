@@ -1,2 +1,4 @@
-jsonschema
 pyyaml
+
+# Dev only
+pytest
