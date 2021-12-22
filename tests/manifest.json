@@ -1,0 +1,137 @@
+# Example dbt manifest that demonstrates the source->snapshot->base->staging->intermediate->dim->fct flow model
+
+{
+    "sources": {
+        "source.db.salesforce.contact": {
+            "resource_type": "source",
+            "name": "contact",
+            "tags": []
+        },
+        "source.db.salesforce.task": {
+            "resource_type": "source",
+            "name": "task",
+            "tags": []
+        }
+    },
+
+    "nodes": {
+        "snapshot.db.snap_sf__contact": {
+            "resource_type": "snapshot",
+            "name": "snap_sf__contact",
+            "tags": [],
+            "depends_on": {
+                "nodes": [
+                    "source.db.salesforce.contact"
+                ]
+            }
+        },
+        "snapshot.db.snap_sf__task": {
+            "resource_type": "snapshot",
+            "name": "snap_sf__task",
+            "tags": [],
+            "depends_on": {
+                "nodes": [
+                    "source.db.salesforce.task"
+                ]
+            }
+        },
+
+        "model.db.base_sf__contact": {
+            "resource_type": "model",
+            "name": "base_sf__contact",
+            "tags": ["base", "staging"],
+            "depends_on": {
+                "nodes": [
+                    "snapshot.db.snap_sf__contact"
+                ]
+            }
+        },
+        "model.db.base_sf__task": {
+            "resource_type": "model",
+            "name": "base_sf__task",
+            "tags": ["base", "staging"],
+            "depends_on": {
+                "nodes": [
+                    "snapshot.db.snap_sf__task"
+                ]
+            }
+        },
+
+        "model.db.stg_sf__contacts": {
+            "resource_type": "model",
+            "name": "stg_sf__contacts",
+            "tags": ["staging"],
+            "depends_on": {
+                "nodes": [
+                    "model.db.base_sf__contact"
+                ]
+            }
+        },
+        "model.db.stg_sf__tasks": {
+            "resource_type": "model",
+            "name": "stg_sf__tasks",
+            "tags": ["staging"],
+            "depends_on": {
+                "nodes": [
+                    "model.db.base_sf__task"
+                ]
+            }
+        },
+
+        "model.db.dim_contacts": {
+            "resource_type": "model",
+            "name": "dim_contacts",
+            "tags": ["dim"],
+            "depends_on": {
+                "nodes": [
+                    "model.db.stg_sf__contacts"
+                ]
+            }
+        },
+        "model.db.dim_tasks": {
+            "resource_type": "model",
+            "name": "fct_tasks",
+            "tags": ["fct"],
+            "depends_on": {
+                "nodes": [
+                    "model.db.stg_sf__contacts",
+                    "model.db.stg_sf__tasks",
+                ]
+            }
+        },
+    },
+
+    "child_map": {
+        "source.db.salesforce.contact": [
+            "snapshot.db.snap_sf__contact"
+        ],
+        "source.db.salesforce.task": [
+            "snapshot.db.snap_sf__task"
+        ],
+
+        "snapshot.db.snap_sf__contact": [
+            "model.db.base_sf__contact"
+        ],
+        "snapshot.db.snap_sf__task": [
+            "model.db.base_sf__task"
+        ],
+
+        "model.db.base_sf__contact": [
+            "model.db.stg_sf__contacts"
+        ],
+        "model.db.base_sf__task": [
+            "model.db.stg_sf__tasks"
+        ],
+
+        "model.db.stg_sf__contacts": [
+            "model.db.dim_contacts",
+            "model.db.fct_tasks",
+        ],
+        "model.db.stg_sf__tasks": [
+            "model.db.fct_tasks"
+        ],
+
+        "model.db.dim_contacts": [],
+        "model.db.fct_tasks": [],
+    },
+}

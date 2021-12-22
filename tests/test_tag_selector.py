@@ -35,6 +35,8 @@ def test_tags_exclude_multiple(tags):
 def test_tags_not_exclude_multiple(tags):
     assert match_tags(tags, 'aa', exclude=['xx', 'yy']) is True
 
+def test_tags_match_all_when_empty(tags):
+    assert match_tags(tags) is True
 
 
 def test_tags_any_single_string(tags):
@@ -60,3 +62,6 @@ def test_tags_any_multiple_mixed(tags):
 
 def test_tags_not_any_multiple_mixed(tags):
     assert match_tags_any(tags, ['xx', {'include': ['aa', 'yy'], 'exclude': 'xx'}]) is False
+
+def test_tags_any_when_empty(tags):
+    assert match_tags_any(tags) is True

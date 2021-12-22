@@ -1,8 +1,12 @@
 class ParseError(BaseException): pass
 
 
-def match_tags(tags, include, exclude=None):
+def match_tags(tags, include=None, exclude=None):
     'Returns true if ALL include are in tags, false if ANY exclude are in tags'
+
+    # Special case - return true if emmpty
+    if include is None:
+        return True
 
     if isinstance(tags, str):
         tags = {tags}
@@ -23,11 +27,14 @@ def _sanitize_tag_matcher(matcher):
     if isinstance(matcher, str):
         return {'include': matcher}
     if isinstance(matcher, dict):
-        return {'include': matcher['include'], 'exclude': matcher.get('exclude')}
+        return {'include': matcher.get('include'), 'exclude': matcher.get('exclude')}
     return None
 
 
-def match_tags_any(tags, matchers):
+def match_tags_any(tags, matchers=None):
+    if matchers is None:
+        return True
+
     if isinstance(tags, str):
         tags = {tags}
     tags = set(tags)
@@ -41,7 +48,6 @@ def match_tags_any(tags, matchers):
         if match_tags(tags, **matcher):
             return True
     return False
-
 
 
 
@@ -77,14 +83,14 @@ class Rule:
 
 class RuleSubject:
     PARSER = {
-        'allowed_args': {'type', 'tags', 'relates-to'},
-        'node_types': {'node', 'snapshot', 'source'}
+        'allowed_args': {'type', 'tags'},
+        'node_types': {'model', 'snapshot', 'source'}
     }
 
-    def __init__(self, node_type='node', tags=None, relates_to=None):
+    def __init__(self, manifest, node_type='model', tags=None):
+        self.manifest = manifest
         self.node_type = node_type
         self.tags = tags
-        self.relates_to = relates_to
 
     @classmethod
     def parse(cls, opts, rule_name=''):
@@ -95,11 +101,33 @@ class RuleSubject:
         if not isinstance(opts, dict):
             raise ParseError(f'Expecting subject arguments for rule "{rule_name}"')
 
-        node_type = opts.get('type', 'node')
+        node_type = opts.get('type', 'model')
         if node_type not in __class__.PARSER["node_types"]:
             raise ParseError(f'Unknown subject type "{node_type}" for rule "{rule_name}".  Expecting one of {__class__.PARSER["node_types"]}')
 
-        return RuleSubject(node_type=node_type, tags=opts.get('tags'), relates_to=opts.get('relates-to'))
+        return RuleSubject(node_type=node_type, tags=opts.get('tags'))
+
+    def selected(self):
+        flat_nodes = {**self.manifest.get('sources', {}), **self.manifest['nodes']}
+
+        selected_nodes = {
+            node: {**params, **{'children': self.manifest.get('child_map', {}).get(node, [])}}
+            for node, params in flat_nodes.items()
+            if params['resource_type'] == self.node_type and match_tags_any(params.get('tags', []), self.tags)
+        }
+
+        for node, params in selected_nodes.items():
+            selected_nodes[node]['child_params'] = {
+                child: flat_nodes[child]
+                for child in selected_nodes[node]['children']
+            }
+
+            selected_nodes[node]['parent_params'] = {
+                parent: flat_nodes[parent]
+                for parent in selected_nodes[node].get('depends_on', {}).get('nodes', [])
+            }
+
+        return selected_nodes
 
 class RuleMust:
     PARSER = {

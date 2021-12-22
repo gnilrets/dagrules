@@ -5,10 +5,12 @@ rules:
   - name: Every source must have a snapshot
     subject:
       type: source
-      relates-to:
-        children: immediate  # /any
+      # Skiping explicit relationships for now... might want to be able to idenfiy subjects
+      # by those that just have children with certain parameters
+      # relates-to:
+      #   children: immediate  # /any
     must:
-      have-relationship:
+      have-child-relationship:
         cardinality: one_to_one
         related-type: snapshot
 
@@ -47,10 +49,8 @@ rules:
   - name: Snapshots must have 0 or 1 children, which must all be base models
     subject:
       type: snapshot
-      relates-to:
-        children: immediate
     must:
-      have-relationship:
+      have-child-relationship:
         cardinality: one_to_one
         required: false
         related-tags:
@@ -60,15 +60,14 @@ rules:
     subject:
       tags:
         include: intermediate
-      relates-to:
-        parents: immediate
     must:
-      have-tags-any:
-        - include: staging
-          exclude: base
-        - core
-        - mart
-        - intermediate
+      have-parent-relationship:
+        have-tags-any:
+          - include: staging
+            exclude: base
+          - core
+          - mart
+          - intermediate
 
   - name: Core models must be tagged as dim or fct
     subject:
@@ -82,21 +81,19 @@ rules:
     subject:
       tags:
         include: dim
-      relates-to:
-        parents: immediate
     must:
-      have-tags-any:
-        - staging
-        - intermediate
+      have-parent-relationship:
+        have-tags-any:
+          - staging
+          - intermediate
 
   - name: Core fact models must only depend on staging, intermediate, or dimension models
     subject:
       tags:
         include: fct
-      relates-to:
-        parents: immediate
     must:
-      have-tags-any:
-        - staging
-        - intermediate
-        - dim
+      have-parent-relationship:
+        have-tags-any:
+          - staging
+          - intermediate
+          - dim
