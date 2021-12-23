@@ -153,7 +153,6 @@ class RuleMust:
             raise ParseError(f'Expecting must arguments for rule "{rule_name}"')
 
 def rule_match_name(subject, match_name):
-    print(f'match_name: {match_name}')
     is_regex_match = re.fullmatch('/.*/', match_name) is not None
     if is_regex_match:
         match_name_regex = re.fullmatch('/(.*)/', match_name).group(1)
@@ -161,8 +160,14 @@ def rule_match_name(subject, match_name):
     else:
         raise Exception("I don't know how to handle anything other that regex matchers")
 
-
     for node, params in subject.selected().items():
         if not has_match(params['name']):
-            raise RuleError(f"\"{params['name']}\" does not match pattern {match_name}")
+            raise RuleError(f"For node \"{node}\", \"{params['name']}\" does not match pattern {match_name}")
+    return True
+
+
+def rule_have_tags_any(subject, tags):
+    for node, params in subject.selected().items():
+        if not match_tags_any(params['tags'], tags):
+            raise RuleError(f"For node \"{node}\", tags {params['tags']} do not match expected tags {tags}")
     return True
