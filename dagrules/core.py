@@ -1,4 +1,7 @@
+import re
+
 class ParseError(BaseException): pass
+class RuleError(BaseException): pass
 
 
 def match_tags(tags, include=None, exclude=None):
@@ -81,6 +84,8 @@ class Rule:
 
         return Rule(name, subject, must)
 
+
+# Does this really even need to be a class?
 class RuleSubject:
     PARSER = {
         'allowed_args': {'type', 'tags'},
@@ -129,6 +134,7 @@ class RuleSubject:
 
         return selected_nodes
 
+# Does this need to be a class?
 class RuleMust:
     PARSER = {
         'allowed_args': {'match-name', 'have-tag', 'relationship', 'relationship-required', 'related-tags'}
@@ -145,3 +151,18 @@ class RuleMust:
 
         if not isinstance(opts, dict):
             raise ParseError(f'Expecting must arguments for rule "{rule_name}"')
+
+def rule_match_name(subject, match_name):
+    print(f'match_name: {match_name}')
+    is_regex_match = re.fullmatch('/.*/', match_name) is not None
+    if is_regex_match:
+        match_name_regex = re.fullmatch('/(.*)/', match_name).group(1)
+        has_match = lambda name: re.fullmatch(match_name_regex, name) is not None
+    else:
+        raise Exception("I don't know how to handle anything other that regex matchers")
+
+
+    for node, params in subject.selected().items():
+        if not has_match(params['name']):
+            raise RuleError(f"\"{params['name']}\" does not match pattern {match_name}")
+    return True
