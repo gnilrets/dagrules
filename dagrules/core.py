@@ -84,75 +84,55 @@ class Rule:
 
         return Rule(name, subject, must)
 
+#TODO: do something with this
+def parse_subject(opts, rule_name=''):
+    unknown_args = set(opts.keys()) - __class__.PARSER['allowed_args']
+    if len(unknown_args) > 0:
+        raise ParseError(f'Unexpected subject arguments "{unknown_args}" for rule "{rule_name}"')
 
-# Does this really even need to be a class?
-class RuleSubject:
-    PARSER = {
-        'allowed_args': {'type', 'tags'},
-        'node_types': {'model', 'snapshot', 'source'}
+    if not isinstance(opts, dict):
+        raise ParseError(f'Expecting subject arguments for rule "{rule_name}"')
+
+    node_type = opts.get('type', 'model')
+    if node_type not in __class__.PARSER["node_types"]:
+        raise ParseError(f'Unknown subject type "{node_type}" for rule "{rule_name}".  Expecting one of {__class__.PARSER["node_types"]}')
+
+
+
+def rule_subjects(manifest, node_type='model', tags=None):
+    flat_nodes = {**manifest.get('sources', {}), **manifest['nodes']}
+
+    selected_nodes = {
+        node: {**params, **{'children': manifest.get('child_map', {}).get(node, [])}}
+        for node, params in flat_nodes.items()
+        if params['resource_type'] == node_type and match_tags_any(params.get('tags', []), tags)
     }
 
-    def __init__(self, manifest, node_type='model', tags=None):
-        self.manifest = manifest
-        self.node_type = node_type
-        self.tags = tags
-
-    @classmethod
-    def parse(cls, opts, rule_name=''):
-        unknown_args = set(opts.keys()) - __class__.PARSER['allowed_args']
-        if len(unknown_args) > 0:
-            raise ParseError(f'Unexpected subject arguments "{unknown_args}" for rule "{rule_name}"')
-
-        if not isinstance(opts, dict):
-            raise ParseError(f'Expecting subject arguments for rule "{rule_name}"')
-
-        node_type = opts.get('type', 'model')
-        if node_type not in __class__.PARSER["node_types"]:
-            raise ParseError(f'Unknown subject type "{node_type}" for rule "{rule_name}".  Expecting one of {__class__.PARSER["node_types"]}')
-
-        return RuleSubject(node_type=node_type, tags=opts.get('tags'))
-
-    def selected(self):
-        flat_nodes = {**self.manifest.get('sources', {}), **self.manifest['nodes']}
-
-        selected_nodes = {
-            node: {**params, **{'children': self.manifest.get('child_map', {}).get(node, [])}}
-            for node, params in flat_nodes.items()
-            if params['resource_type'] == self.node_type and match_tags_any(params.get('tags', []), self.tags)
+    for node, params in selected_nodes.items():
+        selected_nodes[node]['child_params'] = {
+            child: flat_nodes[child]
+            for child in selected_nodes[node]['children']
         }
 
-        for node, params in selected_nodes.items():
-            selected_nodes[node]['child_params'] = {
-                child: flat_nodes[child]
-                for child in selected_nodes[node]['children']
-            }
+        selected_nodes[node]['parent_params'] = {
+            parent: flat_nodes[parent]
+            for parent in selected_nodes[node].get('depends_on', {}).get('nodes', [])
+        }
 
-            selected_nodes[node]['parent_params'] = {
-                parent: flat_nodes[parent]
-                for parent in selected_nodes[node].get('depends_on', {}).get('nodes', [])
-            }
+    return selected_nodes
 
-        return selected_nodes
 
-# Does this need to be a class?
-class RuleMust:
-    PARSER = {
-        'allowed_args': {'match-name', 'have-tag', 'relationship', 'relationship-required', 'related-tags'}
-    }
+# TODO: do something with this
+def parse_must(opts, rule_name=''):
+    allowed_args={'match-name', 'have-tag', 'relationship', 'relationship-required', 'related-tags'}
+    unknown_args = set(opts.keys()) - __class__.PARSER['allowed_args']
+    if len(unknown_args) > 0:
+        raise ParseError(f'Unexpected must arguments "{unknown_args}" for rule "{rule_name}"')
 
-    def __init__(self):
-        pass
+    if not isinstance(opts, dict):
+        raise ParseError(f'Expecting must arguments for rule "{rule_name}"')
 
-    @classmethod
-    def parse(cls, opts, rule_name=''):
-        unknown_args = set(opts.keys()) - __class__.PARSER['allowed_args']
-        if len(unknown_args) > 0:
-            raise ParseError(f'Unexpected must arguments "{unknown_args}" for rule "{rule_name}"')
-
-        if not isinstance(opts, dict):
-            raise ParseError(f'Expecting must arguments for rule "{rule_name}"')
-
-def rule_match_name(subject, match_name):
+def rule_match_name(subjects, match_name):
     is_regex_match = re.fullmatch('/.*/', match_name) is not None
     if is_regex_match:
         match_name_regex = re.fullmatch('/(.*)/', match_name).group(1)
@@ -160,14 +140,14 @@ def rule_match_name(subject, match_name):
     else:
         raise Exception("I don't know how to handle anything other that regex matchers")
 
-    for node, params in subject.selected().items():
+    for node, params in subjects.items():
         if not has_match(params['name']):
             raise RuleError(f"For node \"{node}\", \"{params['name']}\" does not match pattern {match_name}")
     return True
 
 
-def rule_have_tags_any(subject, tags):
-    for node, params in subject.selected().items():
+def rule_have_tags_any(subjects, tags):
+    for node, params in subjects.items():
         if not match_tags_any(params['tags'], tags):
             raise RuleError(f"For node \"{node}\", tags {params['tags']} do not match expected tags {tags}")
     return True

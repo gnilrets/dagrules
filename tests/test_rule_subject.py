@@ -1,5 +1,5 @@
 import dagrules.core
-from dagrules.core import RuleSubject
+from dagrules.core import rule_subjects
 
 def test_identify_model_by_tag():
     manifest = {
@@ -10,9 +10,9 @@ def test_identify_model_by_tag():
         }
     }
 
-    subject = RuleSubject(manifest, tags=['staging'])
+    subjects = rule_subjects(manifest, tags=['staging'])
 
-    actual = sorted(list(subject.selected().keys()))
+    actual = sorted(list(subjects.keys()))
     expected = sorted(['model.a', 'model.c'])
     assert actual == expected
 
@@ -24,9 +24,9 @@ def test_identify_model_by_tag_complex():
             'model.c': {'resource_type': 'model', 'tags': ['staging']},
         }
     }
-    subject = RuleSubject(manifest, tags={'include': 'staging', 'exclude': 'base'})
+    subjects = rule_subjects(manifest, tags={'include': 'staging', 'exclude': 'base'})
 
-    actual = sorted(list(subject.selected().keys()))
+    actual = sorted(list(subjects.keys()))
     expected = sorted(['model.b', 'model.c'])
     assert actual == expected
 
@@ -40,9 +40,9 @@ def test_identify_source():
         },
     }
 
-    subject = RuleSubject(manifest, node_type='source')
+    subjects = rule_subjects(manifest, node_type='source')
 
-    actual = sorted(list(subject.selected().keys()))
+    actual = sorted(list(subjects.keys()))
     expected = sorted(['source.a'])
     assert actual == expected
 
@@ -54,9 +54,9 @@ def test_identify_snapshot():
         },
     }
 
-    subject = RuleSubject(manifest, node_type='snapshot')
+    subjects = rule_subjects(manifest, node_type='snapshot')
 
-    actual = sorted(list(subject.selected().keys()))
+    actual = sorted(list(subjects.keys()))
     expected = sorted(['snapshot.a'])
     assert actual == expected
 
@@ -77,9 +77,9 @@ def test_selected_chilren_properties():
         }
     }
 
-    subject = RuleSubject(manifest, tags=['base'])
+    subjects = rule_subjects(manifest, tags=['base'])
 
-    children = subject.selected()['model.a']['child_params']
+    children = subjects['model.a']['child_params']
     assert len(children) == 2
 
     actual = {child: params.get('tags') for child, params in children.items()}
@@ -119,9 +119,9 @@ def test_selected_parent_properties():
         }
     }
 
-    subject = RuleSubject(manifest, tags={'include': 'staging', 'exclude': 'base'})
+    subjects = rule_subjects(manifest, tags={'include': 'staging', 'exclude': 'base'})
 
-    parents = subject.selected()['model.c']['parent_params']
+    parents = subjects['model.c']['parent_params']
     assert len(parents) == 2
 
     actual = {parent: params.get('tags') for parent, params in parents.items()}

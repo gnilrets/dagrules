@@ -1,7 +1,7 @@
 import pytest
 
 import dagrules.core
-from dagrules.core import RuleSubject, RuleMust, RuleError
+from dagrules.core import rule_subjects, rule_match_name, rule_have_tags_any, RuleError
 
 def test_match_name_pass():
     manifest = {
@@ -10,9 +10,9 @@ def test_match_name_pass():
             'model.stg_b': {'resource_type': 'model', 'name': 'stg_b'},
         }
     }
-    subject = RuleSubject(manifest)
+    subjects = rule_subjects(manifest)
     try:
-        dagrules.core.rule_match_name(subject, '/stg_.*/')
+        rule_match_name(subjects, '/stg_.*/')
     except RuleError as err:
         assert False, str(err)
 
@@ -24,9 +24,9 @@ def test_match_name_fail():
             'model.base_b': {'resource_type': 'model', 'name': 'base_b'},
         }
     }
-    subject = RuleSubject(manifest)
+    subjects = rule_subjects(manifest)
     with pytest.raises(RuleError):
-        dagrules.core.rule_match_name(subject, '/stg_.*/')
+        rule_match_name(subjects, '/stg_.*/')
 
 
 def test_have_tags_any_pass():
@@ -36,9 +36,9 @@ def test_have_tags_any_pass():
             'model.stg_b': {'resource_type': 'model', 'tags': ['staging']},
         }
     }
-    subject = RuleSubject(manifest)
+    subjects = rule_subjects(manifest)
     try:
-        dagrules.core.rule_have_tags_any(subject, ['base', 'staging'])
+        rule_have_tags_any(subjects, ['base', 'staging'])
     except RuleError as err:
         assert False, str(err)
 
@@ -49,6 +49,6 @@ def test_have_tags_any_fail():
             'model.stg_b': {'resource_type': 'model', 'tags': ['staging']},
         }
     }
-    subject = RuleSubject(manifest)
+    subjects = rule_subjects(manifest)
     with pytest.raises(RuleError):
-        dagrules.core.rule_have_tags_any(subject, {'include': 'staging', 'exclude': 'base'})
+        rule_have_tags_any(subjects, {'include': 'staging', 'exclude': 'base'})
