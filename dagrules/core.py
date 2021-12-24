@@ -151,3 +151,43 @@ def rule_have_tags_any(subjects, tags):
         if not match_tags_any(params['tags'], tags):
             raise RuleError(f"For node \"{node}\", tags {params['tags']} do not match expected tags {tags}")
     return True
+
+def rule_have_child_relationship(subjects, cardinality='one_to_many', required=True, select_tags=None, required_tags=None):
+    return rule_have_relationship(
+        subjects,
+        relationship='child',
+        cardinality=cardinality,
+        required=required,
+        select_tags=select_tags,
+        required_tags=required_tags
+    )
+
+def rule_have_parent_relationship(subjects, cardinality='one_to_many', required=True, select_tags=None, required_tags=None):
+    return rule_have_relationship(
+        subjects,
+        relationship='parent',
+        cardinality=cardinality,
+        required=required,
+        select_tags=select_tags,
+        required_tags=required_tags
+    )
+
+def rule_have_relationship(subjects, relationship=None, cardinality='one_to_many', required=True, select_tags=None, required_tags=None):
+    for node, params in subjects.items():
+        selected_deps = {
+            dep: dep_params
+            for dep, dep_params in params[f'{relationship}_params'].items()
+            if match_tags_any(dep_params['tags'], select_tags)
+        }
+
+        n_deps = len(selected_deps)
+        if required and n_deps == 0:
+            raise RuleError(f'{relationship} relationship required, not found for node "{node}"')
+        if cardinality == 'one_to_one' and n_deps > 1:
+            raise RuleError(f'Expecting only one {relationship}, found {n_deps} for node "{node}"')
+        for dep, dep_params in selected_deps.items():
+            if not match_tags_any(dep_params['tags'], required_tags):
+                raise RuleError(
+                    f'Expecting all {relationship} relations of "{node}" to have tags {required_tags}, '
+                    f'however {relationship} "{dep}" had tags {dep_params["tags"]}'
+                )

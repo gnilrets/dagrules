@@ -53,7 +53,7 @@ rules:
       have-child-relationship:
         cardinality: one_to_one
         required: false
-        related-tags:
+        related-tags:  # Want to distinguish between how to select children vs required child tags
           - base
 
   - name: Intermediate models may only depend on non-base staging, core, mart, or other intermediate models
