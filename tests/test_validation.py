@@ -7,10 +7,10 @@ from dagrules.core import (
     validate_rule_name,
     validate_rule,
     validate_rule_subject,
+    validate_rule_must,
     ParseError,
-    ParserRequiredKeyError,
-    ParserAllowedKeyError,
-    ParserArgumentError
+    ParserRequiredValueError,
+    ParserAllowedValueError,
 )
 
 def test_validate_root_pass():
@@ -29,7 +29,7 @@ def test_validate_root_fail_no_version():
         'rules': []
     }
 
-    with pytest.raises(ParserRequiredKeyError):
+    with pytest.raises(ParserRequiredValueError):
         validate_root(dagrules_yaml)
 
 def test_validate_root_fail_no_rules():
@@ -37,7 +37,7 @@ def test_validate_root_fail_no_rules():
         'version': '0'
     }
 
-    with pytest.raises(ParserRequiredKeyError):
+    with pytest.raises(ParserRequiredValueError):
         validate_root(dagrules_yaml)
 
 
@@ -48,7 +48,7 @@ def test_validate_root_fail_unknown_keys():
         'rules': []
     }
 
-    with pytest.raises(ParserAllowedKeyError):
+    with pytest.raises(ParserAllowedValueError):
         validate_root(dagrules_yaml)
 
 def test_rule_pass():
@@ -69,7 +69,7 @@ def test_validate_rule_no_name_fail():
         'must': {}
     }
 
-    with pytest.raises(ParserRequiredKeyError):
+    with pytest.raises(ParserRequiredValueError):
         validate_rule_name(3, rule)
 
 def test_validate_rule_fail_missing_keys():
@@ -78,7 +78,7 @@ def test_validate_rule_fail_missing_keys():
         'subject': {}
     }
 
-    with pytest.raises(ParserRequiredKeyError):
+    with pytest.raises(ParserRequiredValueError):
         validate_rule('bob', rule)
 
 def test_validate_rule_fail_unknown_keys():
@@ -89,7 +89,7 @@ def test_validate_rule_fail_unknown_keys():
         'bruh': 'sup'
     }
 
-    with pytest.raises(ParserAllowedKeyError):
+    with pytest.raises(ParserAllowedValueError):
         validate_rule('bob', rule)
 
 def test_validate_rule_subject_pass():
@@ -107,5 +107,24 @@ def test_validate_rule_subject_fail_unknown_keys():
         'bruh': 'sup'
     }
 
-    with pytest.raises(ParserAllowedKeyError):
+    with pytest.raises(ParserAllowedValueError):
         validate_rule_subject('bob', subject)
+
+
+def test_validate_rule_must_pass():
+    must = {
+        'have-tags-any': ['a', 'b']
+    }
+
+    try:
+        validate_rule_must('bob', must)
+    except ParseError as err:
+        assert False, str(err)
+
+def test_validate_rule_must_fail_unknown_keys():
+    must = {
+        'bruh': 'sup'
+    }
+
+    with pytest.raises(ParserAllowedValueError):
+        validate_rule_must('bob', must)

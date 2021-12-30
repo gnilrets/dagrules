@@ -1,9 +1,8 @@
 import re
 
 class ParseError(BaseException): pass
-class ParserAllowedKeyError(ParseError): pass
-class ParserRequiredKeyError(ParseError): pass
-class ParserArgumentError(ParseError): pass
+class ParserAllowedValueError(ParseError): pass
+class ParserRequiredValueError(ParseError): pass
 
 
 class RuleError(BaseException): pass
@@ -62,64 +61,73 @@ def validate(dagrules_yaml):
     for idx, rule in enumerate(dagrules_yaml['rules']):
         validate_rule_name(idx, rule)
         validate_rule(rule['name'], rule)
-        # validate_subject(rule['name', rule['subject'])
+        validate_subject(rule['name'], rule['subject'])
         # validate_must(rule['name'], rule['must'])
 
-def validate_keys(keys, allowed_keys=None, required_keys=None):
-    keys = set(keys)
-    allowed_keys = set() if allowed_keys is None else set(allowed_keys)
-    required_keys = set() if required_keys is None else set(required_keys)
+def validate_values(values, allowed_values=None, required_values=None):
+    values = set(values)
+    allowed_values = set() if allowed_values is None else set(allowed_values)
+    required_values = set() if required_values is None else set(required_values)
 
-    unknown_keys = keys - allowed_keys
-    if len(unknown_keys) > 0 and len(allowed_keys) > 0:
-        raise ParserAllowedKeyError(str(unknown_keys))
+    unknown_values = values - allowed_values
+    if len(unknown_values) > 0 and len(allowed_values) > 0:
+        raise ParserAllowedValueError(str(unknown_values))
 
-    if not required_keys.issubset(keys):
-        raise ParserRequiredKeyError(str(required_keys - keys))
+    if not required_values.issubset(values):
+        raise ParserRequiredValueError(str(required_values - values))
 
 
 def validate_root(config):
     try:
-        validate_keys(
-            keys=config.keys(),
-            allowed_keys={'version', 'rules'},
-            required_keys={'version', 'rules'},
+        validate_values(
+            values=config.keys(),
+            allowed_values={'version', 'rules'},
+            required_values={'version', 'rules'},
         )
-    except ParserAllowedKeyError as err:
-        raise ParserAllowedKeyError(f'Unknown dagrules parameters: {err}')
-    except ParserRequiredKeyError as err:
-        raise ParserRequiredKeyError(f'Required dagrules parameters not found: {err}')
+    except ParserAllowedValueError as err:
+        raise ParserAllowedValueError(f'Unknown dagrules parameters: {err}')
+    except ParserRequiredValueError as err:
+        raise ParserRequiredValueError(f'Required dagrules parameters not found: {err}')
 
 def validate_rule_name(rule_idx, config):
     if 'name' not in config.keys():
-        raise ParserRequiredKeyError(f'No name defined for rule at index {rule_idx}')
+        raise ParserRequiredValueError(f'No name defined for rule at index {rule_idx}')
 
 def validate_rule(name, config):
     try:
-        validate_keys(
-            keys=config.keys(),
-            allowed_keys={'name', 'subject', 'must'},
-            required_keys={'name', 'subject', 'must'},
+        validate_values(
+            values=config.keys(),
+            allowed_values={'name', 'subject', 'must'},
+            required_values={'name', 'subject', 'must'},
         )
-    except ParserAllowedKeyError as err:
-        raise ParserAllowedKeyError(f'Unknown parameters for rule "{name}": {err}')
-    except ParserRequiredKeyError as err:
-        raise ParserRequiredKeyError(f'Required parameters not found for rule "{name}": {err}')
+    except ParserAllowedValueError as err:
+        raise ParserAllowedValueError(f'Unknown parameters for rule "{name}": {err}')
+    except ParserRequiredValueError as err:
+        raise ParserRequiredValueError(f'Required parameters not found for rule "{name}": {err}')
 
 def validate_rule_subject(rule_name, config):
     try:
-        validate_keys(
-            keys=config.keys(),
-            allowed_keys={'type', 'tags'},
-            required_keys={},
+        validate_values(
+            values=config.keys(),
+            allowed_values={'type', 'tags'},
+            required_values={},
         )
-    except ParserAllowedKeyError as err:
-        raise ParserAllowedKeyError(f'Unknown subject parameters for rule "{rule_name}": {err}')
-    except ParserRequiredKeyError as err:
-        raise ParserRequiredKeyError(f'Required subject parameters not found for rule "{rule_name}": {err}')
+    except ParserAllowedValueError as err:
+        raise ParserAllowedValueError(f'Unknown subject parameters for rule "{rule_name}": {err}')
+    except ParserRequiredValueError as err:
+        raise ParserRequiredValueError(f'Required subject parameters not found for rule "{rule_name}": {err}')
 
-# TODO: specifics of subjects
-# TODO: musts
+def validate_rule_must(rule_name, config):
+    try:
+        validate_values(
+            values=config.keys(),
+            allowed_values={'have-child-relationship', 'have-parent-relationship', 'match-name', 'have-tags-any'},
+            required_values={},
+        )
+    except ParserAllowedValueError as err:
+        raise ParserAllowedValueError(f'Unknown must parameters for rule "{rule_name}": {err}')
+    except ParserRequiredValueError as err:
+        raise ParserRequiredValueError(f'Required must parameters not found for rule "{rule_name}": {err}')
 
 
 class Rule:
