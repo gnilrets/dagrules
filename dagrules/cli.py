@@ -4,6 +4,8 @@ import json
 
 import yaml
 
+import dagrules.core
+
 DBT_ROOT = os.getcwd()
 if "DBT_ROOT" in os.environ:
     DBT_ROOT = os.environ["DBT_ROOT"]
@@ -13,8 +15,8 @@ def parse_args():
     parser = argparse.ArgumentParser(description="dagrules cli")
 
     parser.add_argument(
-        "--validate",
-        dest='validate',
+        "--check",
+        dest='check',
         const=True,
         nargs='?',
         default=False,
@@ -26,15 +28,24 @@ def parse_args():
 def main():
     args = parse_args()
 
-    if args.validate:
-        validate(args)
+    config = read_config()
+    manifest = read_manifest()
 
-def read_rules():
+
+    if args.check:
+        dagrules.core.validate(config)
+        dagrules.core.check(config, manifest)
+
+def read_config():
     'Read yaml rules file'
 
-    with open(DAGRULES_YAML) as f:
-        rules = yaml.safe_load(f)
-    return rules
+    with open(DAGRULES_YAML) as rules_file:
+        config = yaml.safe_load(rules_file)
+    return config
 
-def validate(args):
-    print(json.dumps(read_rules(), indent=4))
+def read_manifest():
+    'Read the dbt manifest.json file'
+
+    with open(os.path.join(DBT_ROOT, 'manifest.json')) as manifest_file:
+        manifest = json.load(manifest_file)
+    return manifest

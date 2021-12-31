@@ -1,5 +1,7 @@
 import re
 
+from colorama import Fore, Style
+
 class ParseError(BaseException): pass
 class ParserAllowedValueError(ParseError): pass
 class ParserRequiredValueError(ParseError): pass
@@ -56,13 +58,14 @@ def match_tags_any(tags, matchers=None):
             return True
     return False
 
-def validate(dagrules_yaml):
-    validate_root(dagrules_yaml)
-    for idx, rule in enumerate(dagrules_yaml['rules']):
+def validate(config):
+    validate_root(config)
+    for idx, rule in enumerate(config['rules']):
         validate_rule_name(idx, rule)
         validate_rule(rule['name'], rule)
-        validate_subject(rule['name'], rule['subject'])
-        # validate_must(rule['name'], rule['must'])
+        if 'subject' in rule:
+            validate_rule_subject(rule['name'], rule['subject'])
+        validate_rule_must(rule['name'], rule['must'])
 
 def validate_values(values, allowed_values=None, required_values=None):
     values = set(values)
@@ -98,7 +101,7 @@ def validate_rule(name, config):
         validate_values(
             values=config.keys(),
             allowed_values={'name', 'subject', 'must'},
-            required_values={'name', 'subject', 'must'},
+            required_values={'name', 'must'},
         )
     except ParserAllowedValueError as err:
         raise ParserAllowedValueError(f'Unknown parameters for rule "{name}": {err}')
@@ -130,48 +133,48 @@ def validate_rule_must(rule_name, config):
         raise ParserRequiredValueError(f'Required must parameters not found for rule "{rule_name}": {err}')
 
 
-class Rule:
-    PARSER = {
-        'allowed_args': {'name', 'subject', 'must', 'must-not'}
-    }
 
-    def __init__(self, name, subject, must):
-        self.name = name
-        self.subject = subject
-        self.must = must
+def check(config, manifest):
+    _version = config['version']
 
-    @classmethod
-    def parse(cls, opts):
-        unknown_args = set(opts.keys()) - __class__.PARSER['allowed_args']
-        if len(unknown_args) > 0:
-            raise ParseError(f'Unexpected rule arguments "{unknown_args}" for rule "{rule_name}"')
+    has_error = False
+    for rule in config['rules']:
+        subject_config = rule.get('subject', {})
+        subjects = rule_subjects(
+            manifest,
+            node_type=subject_config.get('type', 'model'),
+            tags=subject_config.get('tags')
+        )
 
-        if 'name' not in opts:
-            raise ParseError(f'No name defined for rule: {opts}')
-        name = opts['name']
+        try:
+            print(f'Checking rule {rule["name"]}', end=' ... ')
+            check_rule(rule, subjects)
+            print(Fore.GREEN + "PASSED" + Style.RESET_ALL)
 
-        if 'subject' not in opts:
-            raise ParseError(f'No subject defined for rule: {name}')
-        subject = RuleSubject.parse(opts['subject'], rule_name=name)
+        except RuleError as err:
+            print(Fore.RED + "FAILED")
+            print(err)
+            print(Style.RESET_ALL)
+            has_error = True
 
-        if not ('must' in opts or 'must-not' in opts):
-            raise ParseError(f'Rule "{name}" does not specify a "must" or "must-not" condition')
-        must = 'must parser'
+    if has_error:
+        raise RuleError("There were dagrule rule errors, see log")
 
-        return Rule(name, subject, must)
 
-#TODO: do something with this
-def parse_subject(opts, rule_name=''):
-    unknown_args = set(opts.keys()) - __class__.PARSER['allowed_args']
-    if len(unknown_args) > 0:
-        raise ParseError(f'Unexpected subject arguments "{unknown_args}" for rule "{rule_name}"')
+def check_rule(rule, subjects):
+    if 'match-name' in rule['must']:
+        rule_match_name(subjects, rule['must']['match-name'])
 
-    if not isinstance(opts, dict):
-        raise ParseError(f'Expecting subject arguments for rule "{rule_name}"')
+    if 'have-tags-any' in rule['must']:
+        rule_have_tags_any(subjects, rule['must']['have-tags-any'])
 
-    node_type = opts.get('type', 'model')
-    if node_type not in __class__.PARSER["node_types"]:
-        raise ParseError(f'Unknown subject type "{node_type}" for rule "{rule_name}".  Expecting one of {__class__.PARSER["node_types"]}')
+    if 'have-child-relationship' in rule['must']:
+        kwargs = {k.replace('-','_'):v for k,v in rule['must']['have-child-relationship'].items()}
+        rule_have_relationship(subjects, 'child', **kwargs)
+
+    if 'have-parent-relationship' in rule['must']:
+        kwargs = {k.replace('-','_'):v for k,v in rule['must']['have-parent-relationship'].items()}
+        rule_have_relationship(subjects, 'parent', **kwargs)
 
 
 
@@ -197,24 +200,13 @@ def rule_subjects(manifest, node_type='model', tags=None):
 
     return selected_nodes
 
-
-# TODO: do something with this
-def parse_must(opts, rule_name=''):
-    allowed_args={'match-name', 'have-tag', 'relationship', 'relationship-required', 'related-tags'}
-    unknown_args = set(opts.keys()) - __class__.PARSER['allowed_args']
-    if len(unknown_args) > 0:
-        raise ParseError(f'Unexpected must arguments "{unknown_args}" for rule "{rule_name}"')
-
-    if not isinstance(opts, dict):
-        raise ParseError(f'Expecting must arguments for rule "{rule_name}"')
-
 def rule_match_name(subjects, match_name):
     is_regex_match = re.fullmatch('/.*/', match_name) is not None
     if is_regex_match:
         match_name_regex = re.fullmatch('/(.*)/', match_name).group(1)
         has_match = lambda name: re.fullmatch(match_name_regex, name) is not None
     else:
-        raise Exception("I don't know how to handle anything other that regex matchers")
+        raise RuleError("I don't know how to handle anything other that regex matchers")
 
     for node, params in subjects.items():
         if not has_match(params['name']):
@@ -228,32 +220,21 @@ def rule_have_tags_any(subjects, tags):
             raise RuleError(f"For node \"{node}\", tags {params['tags']} do not match expected tags {tags}")
     return True
 
-def rule_have_child_relationship(subjects, cardinality='one_to_many', required=True, select_tags=None, required_tags=None):
-    return rule_have_relationship(
-        subjects,
-        relationship='child',
-        cardinality=cardinality,
-        required=required,
-        select_tags=select_tags,
-        required_tags=required_tags
-    )
+def rule_have_relationship(subjects, relationship, **kwargs):
+    cardinality = kwargs.get('cardinality', 'one_to_many')
+    required = kwargs.get('required', True)
+    select_node_type = kwargs.get('select_node_type', None)
+    require_node_type = kwargs.get('require_node_type', None)
+    select_tags_any = kwargs.get('select_tags_any', None)
+    require_tags_any = kwargs.get('require_tags_any', None)
 
-def rule_have_parent_relationship(subjects, cardinality='one_to_many', required=True, select_tags=None, required_tags=None):
-    return rule_have_relationship(
-        subjects,
-        relationship='parent',
-        cardinality=cardinality,
-        required=required,
-        select_tags=select_tags,
-        required_tags=required_tags
-    )
-
-def rule_have_relationship(subjects, relationship=None, cardinality='one_to_many', required=True, select_tags=None, required_tags=None):
     for node, params in subjects.items():
         selected_deps = {
             dep: dep_params
             for dep, dep_params in params[f'{relationship}_params'].items()
-            if match_tags_any(dep_params['tags'], select_tags)
+            if match_tags_any(dep_params.get('tags'), select_tags_any) and (
+                select_node_type is None or select_node_type == dep_params['resource_type']
+            )
         }
 
         n_deps = len(selected_deps)
@@ -262,8 +243,13 @@ def rule_have_relationship(subjects, relationship=None, cardinality='one_to_many
         if cardinality == 'one_to_one' and n_deps > 1:
             raise RuleError(f'Expecting only one {relationship}, found {n_deps} for node "{node}"')
         for dep, dep_params in selected_deps.items():
-            if not match_tags_any(dep_params['tags'], required_tags):
+            if not match_tags_any(dep_params.get('tags'), require_tags_any):
                 raise RuleError(
-                    f'Expecting all {relationship} relations of "{node}" to have tags {required_tags}, '
+                    f'Expecting all {relationship} relations of "{node}" to have tags {require_tags_any}, '
                     f'however {relationship} "{dep}" had tags {dep_params["tags"]}'
+                )
+            if require_node_type is not None and dep_params['resource_type'] != require_node_type:
+                raise RuleError(
+                    f'Expecting all {relationship} relations of "{node}" to be of node type "{require_node_type}", '
+                    f'however {relationship} "{dep}" had type "{dep_params["resource_type"]}"'
                 )

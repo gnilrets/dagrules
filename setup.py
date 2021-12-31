@@ -82,6 +82,7 @@ setup(
     # https://packaging.python.org/en/latest/requirements.html
     install_requires=[
         'pyyaml',
+        'colorama'
     ],
 
     python_requires='>=3',

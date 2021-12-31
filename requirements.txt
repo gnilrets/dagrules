@@ -6,6 +6,8 @@
 #
 attrs==21.2.0
     # via pytest
+colorama==0.4.4
+    # via -r requirements.in
 iniconfig==1.1.1
     # via pytest
 packaging==21.3

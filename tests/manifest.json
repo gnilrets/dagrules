@@ -1,5 +1,3 @@
-# Example dbt manifest that demonstrates the source->snapshot->base->staging->intermediate->dim->fct flow model
-
 {
     "sources": {
         "source.db.salesforce.contact": {
@@ -81,24 +79,24 @@
         "model.db.dim_contacts": {
             "resource_type": "model",
             "name": "dim_contacts",
-            "tags": ["dim"],
+            "tags": ["core", "dim"],
             "depends_on": {
                 "nodes": [
                     "model.db.stg_sf__contacts"
                 ]
             }
         },
-        "model.db.dim_tasks": {
+        "model.db.fct_tasks": {
             "resource_type": "model",
             "name": "fct_tasks",
-            "tags": ["fct"],
+            "tags": ["core", "fct"],
             "depends_on": {
                 "nodes": [
                     "model.db.stg_sf__contacts",
-                    "model.db.stg_sf__tasks",
+                    "model.db.stg_sf__tasks"
                 ]
             }
-        },
+        }
     },
 
     "child_map": {
@@ -125,13 +123,13 @@
 
         "model.db.stg_sf__contacts": [
             "model.db.dim_contacts",
-            "model.db.fct_tasks",
+            "model.db.fct_tasks"
         ],
         "model.db.stg_sf__tasks": [
             "model.db.fct_tasks"
         ],
 
         "model.db.dim_contacts": [],
-        "model.db.fct_tasks": [],
-    },
+        "model.db.fct_tasks": []
+    }
 }

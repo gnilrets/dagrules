@@ -5,8 +5,7 @@ from dagrules.core import (
     rule_subjects,
     rule_match_name,
     rule_have_tags_any,
-    rule_have_child_relationship,
-    rule_have_parent_relationship,
+    rule_have_relationship,
     RuleError,
 )
 
@@ -76,7 +75,7 @@ def test_have_child_relationship_pass():
     subjects = rule_subjects(manifest, node_type='snapshot')
 
     try:
-        rule_have_child_relationship(subjects, cardinality='one_to_one', required_tags='base')
+        rule_have_relationship(subjects, 'child', cardinality='one_to_one', require_tags_any='base')
     except RuleError as err:
         assert False, str(err)
 
@@ -100,7 +99,7 @@ def test_have_parent_relationship_pass():
     subjects = rule_subjects(manifest, tags='base')
 
     try:
-        rule_have_parent_relationship(subjects, cardinality='one_to_one', required_tags='snapshot')
+        rule_have_relationship(subjects, 'parent', cardinality='one_to_one', require_tags_any='snapshot')
     except RuleError as err:
         assert False, str(err)
 
@@ -120,7 +119,7 @@ def test_have_child_relationship_fail_cardinality():
     subjects = rule_subjects(manifest, node_type='snapshot')
 
     with pytest.raises(RuleError):
-        rule_have_child_relationship(subjects, cardinality='one_to_one', required_tags='base')
+        rule_have_relationship(subjects, 'child', cardinality='one_to_one', require_tags_any='base')
 
 def test_have_child_relationship_fail_required_relationship():
     manifest = {
@@ -137,7 +136,7 @@ def test_have_child_relationship_fail_required_relationship():
     subjects = rule_subjects(manifest, node_type='snapshot')
 
     with pytest.raises(RuleError):
-        rule_have_child_relationship(subjects, cardinality='one_to_one', required_tags='base')
+        rule_have_relationship(subjects, 'child', cardinality='one_to_one', require_tags_any='base')
 
 def test_have_child_relationship_pass_not_required_relationship():
     manifest = {
@@ -154,7 +153,7 @@ def test_have_child_relationship_pass_not_required_relationship():
     subjects = rule_subjects(manifest, node_type='snapshot')
 
     try:
-        rule_have_child_relationship(subjects, cardinality='one_to_one', required=False, required_tags='base')
+        rule_have_relationship(subjects, 'child', cardinality='one_to_one', required=False, require_tags_any='base')
     except RuleError as err:
         assert False, str(err)
 
@@ -174,7 +173,7 @@ def test_have_child_relationship_fail_required_tagas():
     subjects = rule_subjects(manifest, node_type='snapshot')
 
     with pytest.raises(RuleError):
-        rule_have_child_relationship(subjects, cardinality='one_to_one', required_tags='base')
+        rule_have_relationship(subjects, 'child', cardinality='one_to_one', require_tags_any='base')
 
 def test_have_child_relationship_selected_tags_pass():
     manifest = {
@@ -192,6 +191,44 @@ def test_have_child_relationship_selected_tags_pass():
     subjects = rule_subjects(manifest, node_type='snapshot')
 
     try:
-        rule_have_child_relationship(subjects, required=False, select_tags='base', required_tags='base')
+        rule_have_relationship(subjects, 'child', required=False, select_tags_any='base', require_tags_any='base')
     except RuleError as err:
         assert False, str(err)
+
+def test_have_child_relationship_select_node_type_pass():
+    manifest = {
+        'nodes': {
+            'source.src_a': {'resource_type': 'source'},
+            'source.src_b': {'resource_type': 'source'},
+            'snapshot.snap_a': {'resource_type': 'snapshot'},
+            'model.base_b': {'resource_type': 'model'},
+        },
+        'child_map': {
+            'source.src_a': ['snapshot.snap_a'],
+            'source.src_b': ['model.base_b'],
+        }
+    }
+    subjects = rule_subjects(manifest, node_type='source')
+
+    try:
+        rule_have_relationship(subjects, 'child', required=False, select_node_type='snapshot', require_node_type='snapshot')
+    except RuleError as err:
+        assert False, str(err)
+
+def test_have_child_relationship_require_node_type_fail():
+    manifest = {
+        'nodes': {
+            'source.src_a': {'resource_type': 'source'},
+            'source.src_b': {'resource_type': 'source'},
+            'snapshot.snap_a': {'resource_type': 'snapshot'},
+            'model.base_b': {'resource_type': 'model'},
+        },
+        'child_map': {
+            'source.src_a': ['snapshot.snap_a'],
+            'source.src_b': ['model.base_b'],
+        }
+    }
+    subjects = rule_subjects(manifest, node_type='source')
+
+    with pytest.raises(RuleError):
+        rule_have_relationship(subjects, 'child', required=False, require_node_type='snapshot')
