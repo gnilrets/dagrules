@@ -2,4 +2,7 @@ pyyaml
 colorama
 
 # Dev only
+invoke
 pytest
+black
+pylint
