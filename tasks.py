@@ -4,6 +4,10 @@ Common tasks for managing this project
 
 from invoke import task
 
+@task
+def test(ctx):
+    cmd = "pytest -s -vv --tb=short --color=yes tests"
+    ctx.run(cmd)
 
 @task(
     help={
