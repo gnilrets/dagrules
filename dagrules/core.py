@@ -215,7 +215,11 @@ def validate_rule_must(rule_name, config):
 def check(config, manifest):
     "Checks whether any dagrules rules specified are violated"
 
-    _version = config["version"]
+    version = config["version"]
+    if str(version) != '1':
+        raise ParserAllowedValueError(
+            f"dagrules.yml config version must be '1'"
+        )
 
     has_error = False
     for rule in config["rules"]:

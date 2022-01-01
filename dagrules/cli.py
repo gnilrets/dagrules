@@ -54,6 +54,6 @@ def _read_config():
 def _read_manifest():
     "Read the dbt manifest.json file"
 
-    with open(os.path.join(DBT_ROOT, "manifest.json"), encoding="utf-8") as manifest_file:
+    with open(os.path.join(DBT_ROOT, "target", "manifest.json"), encoding="utf-8") as manifest_file:
         manifest = json.load(manifest_file)
     return manifest
