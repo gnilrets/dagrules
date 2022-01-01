@@ -5,10 +5,6 @@ rules:
   - name: Every source must have a snapshot
     subject:
       type: source
-      # Skiping explicit relationships for now... might want to be able to idenfiy subjects
-      # by those that just have children with certain parameters
-      # relates-to:
-      #   children: immediate  # /any
     must:
       have-child-relationship:
         cardinality: one_to_one
@@ -22,7 +18,7 @@ rules:
 
   - name: Non-base staging models must be prefixed with stg_
     subject:
-      type: model  # model is the default type
+      type: model # model is the default type
       tags:
         - include: staging
           exclude: base
@@ -31,7 +27,7 @@ rules:
 
   - name: Base models must be prefixed with base_
     subject:
-      tags: base  # want to be flexible about include/exclude/array/etc
+      tags: base
     must:
       match-name: /base_.*/
 
@@ -53,7 +49,7 @@ rules:
       have-child-relationship:
         cardinality: one_to_one
         required: false
-        select-tags-any:  # Want to distinguish between how to select children vs required child tags
+        select-tags-any:
           - base
 
   - name: Intermediate models may only depend on non-base staging, core, mart, or other intermediate models
