@@ -49,7 +49,7 @@ rules:
       have-child-relationship:
         cardinality: one_to_one
         required: false
-        select-tags-any:
+        require-tags-any:
           - base
 
   - name: Intermediate models may only depend on non-base staging, core, mart, or other intermediate models
@@ -58,7 +58,7 @@ rules:
         include: intermediate
     must:
       have-parent-relationship:
-        have-tags-any:
+        require-tags-any:
           - include: staging
             exclude: base
           - core
@@ -79,7 +79,7 @@ rules:
         include: dim
     must:
       have-parent-relationship:
-        have-tags-any:
+        require-tags-any:
           - staging
           - intermediate
 
@@ -89,7 +89,7 @@ rules:
         include: fct
     must:
       have-parent-relationship:
-        have-tags-any:
+        require-tags-any:
           - staging
           - intermediate
           - dim

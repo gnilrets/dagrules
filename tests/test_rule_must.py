@@ -12,6 +12,7 @@ from dagrules.core import (
     rule_have_tags_any,
     rule_have_relationship,
     RuleError,
+    ParserAllowedValueError
 )
 
 
@@ -113,6 +114,24 @@ def test_have_parent_relationship_pass():
         )
     except RuleError as err:
         assert False, str(err)
+
+def test_have_child_relationship_fail_kwargs():
+    manifest = {
+        "nodes": {
+            "snapshot.snap_a": {"resource_type": "snapshot"},
+            "snapshot.snap_b": {"resource_type": "snapshot"},
+            "model.base_a": {"resource_type": "model", "tags": ["base"]},
+            "model.base_b": {"resource_type": "model", "tags": ["base"]},
+        },
+        "child_map": {
+            "snapshot.snap_a": ["model.base_a"],
+            "snapshot.snap_b": ["model.base_b"],
+        },
+    }
+    subjects = rule_subjects(manifest, node_type="snapshot")
+
+    with pytest.raises(ParserAllowedValueError):
+        rule_have_relationship(subjects, "child", cardinality="one_to_one", require_tags_any="base", monkeys='not here')
 
 
 def test_have_child_relationship_fail_cardinality():

@@ -321,12 +321,26 @@ def rule_have_tags_any(subjects, tags):
 def rule_have_relationship(subjects, relationship, **kwargs):
     "Checks whether subjects have the specified relationships"
 
+    unknown_kwargs = set(kwargs.keys()) - {
+        'cardinality',
+        'required',
+        'select_node_type',
+        'require_node_type',
+        'select_tags_any',
+        'require_tags_any'
+    }
+    unknown_kwargs = {v.replace('_', '-') for v in unknown_kwargs}
+    if len(unknown_kwargs) > 0:
+        raise ParserAllowedValueError(f'Unknown argument to have-{relationship}-relationship: {unknown_kwargs}')
+
     cardinality = kwargs.get("cardinality", "one_to_many")
     required = kwargs.get("required", True)
     select_node_type = kwargs.get("select_node_type", None)
     require_node_type = kwargs.get("require_node_type", None)
     select_tags_any = kwargs.get("select_tags_any", None)
     require_tags_any = kwargs.get("require_tags_any", None)
+
+    #TODO: raise an error if unknown kwargs are present
 
     for node, params in subjects.items():
         selected_deps = {
