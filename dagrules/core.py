@@ -216,10 +216,8 @@ def check(config, manifest):
     "Checks whether any dagrules rules specified are violated"
 
     version = config["version"]
-    if str(version) != '1':
-        raise ParserAllowedValueError(
-            f"dagrules.yml config version must be '1'"
-        )
+    if str(version) != "1":
+        raise ParserAllowedValueError("dagrules.yml config version must be '1'")
 
     has_error = False
     for rule in config["rules"]:
@@ -318,20 +316,22 @@ def rule_have_tags_any(subjects, tags):
     return True
 
 
-def rule_have_relationship(subjects, relationship, **kwargs):
+def rule_have_relationship(subjects, relationship, **kwargs):  # pylint: disable=too-many-locals
     "Checks whether subjects have the specified relationships"
 
     unknown_kwargs = set(kwargs.keys()) - {
-        'cardinality',
-        'required',
-        'select_node_type',
-        'require_node_type',
-        'select_tags_any',
-        'require_tags_any'
+        "cardinality",
+        "required",
+        "select_node_type",
+        "require_node_type",
+        "select_tags_any",
+        "require_tags_any",
     }
-    unknown_kwargs = {v.replace('_', '-') for v in unknown_kwargs}
+    unknown_kwargs = {v.replace("_", "-") for v in unknown_kwargs}
     if len(unknown_kwargs) > 0:
-        raise ParserAllowedValueError(f'Unknown argument to have-{relationship}-relationship: {unknown_kwargs}')
+        raise ParserAllowedValueError(
+            f"Unknown argument to have-{relationship}-relationship: {unknown_kwargs}"
+        )
 
     cardinality = kwargs.get("cardinality", "one_to_many")
     required = kwargs.get("required", True)

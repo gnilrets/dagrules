@@ -12,7 +12,7 @@ from dagrules.core import (
     rule_have_tags_any,
     rule_have_relationship,
     RuleError,
-    ParserAllowedValueError
+    ParserAllowedValueError,
 )
 
 
@@ -115,6 +115,7 @@ def test_have_parent_relationship_pass():
     except RuleError as err:
         assert False, str(err)
 
+
 def test_have_child_relationship_fail_kwargs():
     manifest = {
         "nodes": {
@@ -131,7 +132,9 @@ def test_have_child_relationship_fail_kwargs():
     subjects = rule_subjects(manifest, node_type="snapshot")
 
     with pytest.raises(ParserAllowedValueError):
-        rule_have_relationship(subjects, "child", cardinality="one_to_one", require_tags_any="base", monkeys='not here')
+        rule_have_relationship(
+            subjects, "child", cardinality="one_to_one", require_tags_any="base", monkeys="not here"
+        )
 
 
 def test_have_child_relationship_fail_cardinality():
