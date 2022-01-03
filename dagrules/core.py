@@ -340,8 +340,6 @@ def rule_have_relationship(subjects, relationship, **kwargs):
     select_tags_any = kwargs.get("select_tags_any", None)
     require_tags_any = kwargs.get("require_tags_any", None)
 
-    #TODO: raise an error if unknown kwargs are present
-
     for node, params in subjects.items():
         selected_deps = {
             dep: dep_params

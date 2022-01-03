@@ -33,16 +33,34 @@ rules:
     ...
 ````
 
+### Installation and running rules
+
+dagrules can be installed using pip:
+
+````bash
+pip install dagrules
+````
+
+And then run `dagrules` with the `--check` argument from your dbt project root:
+
+````bash
+dagrules --check
+````
+
+dagrules assumes that it is being executed from the dbt project root and that there is
+a `target/manifest.json` file already present (so the dbt project must be compiled
+any time the dag is changed before dagrules can be run).  These defaults can
+be overridden by setting the `DBT_ROOT` and `DAGRULES_YAML` environment variable to
+point to other locations.
+
 ## Subjects
 
-For every rule, a subject should be declared that defines how to select nodes
-of the dbt dag to use for rule validation.  Omitting the subject means
-that the rule will be applied to every dbt model.  dagrules currently supports
-two ways to select subjects: by node type and tags.
-
+For every rule, a subject should be declared that defines how to
+select nodes of the dbt dag to use for rule validation.  Omitting the
+subject means that the rule will be applied to every dbt model.
 dagrules currently supports two ways to select subjects: 1) by node
-type (source, snapshot, model) and 2) by tags.  For example, the follow
-subject includes all models that are tagged "staging":
+type (source, snapshot, model) and 2) by tags.  For example, the
+follow subject includes all models that are tagged "staging":
 
 ````yaml
 rules:
@@ -55,7 +73,7 @@ rules:
 ````
 
 
-### Tag selection
+## Tag selection
 
 Tag selection applies both to `subject` and `must` section of the
 dagrules yaml spec.  Tags can be defined several ways.
